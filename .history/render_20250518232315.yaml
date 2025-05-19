@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: greentech-dashboard
+    env: python
+    runtime: python3
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: gunicorn dashboard:server -b 0.0.0.0:$PORT
+    plan: free
