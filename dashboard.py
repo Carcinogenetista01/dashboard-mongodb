@@ -11,9 +11,10 @@ from dateutil import parser
 from io import StringIO
 from dash.exceptions import PreventUpdate
 from flask import Flask, send_from_directory
+import dash.dash_table 
+import os
 
-server = Flask(__name__)  # Esta variable DEBE llamarse 'server'
-# Ruta para el root (dashboard principal)
+server = Flask(__name__)  
 @server.route('/')
 def dash_app():
     return app.index()
@@ -31,7 +32,6 @@ def serve_login():
 @server.route('/assets/<path:path>')
 def serve_assets(path):
     return send_from_directory('assets', path)
-
 
 app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -247,6 +247,34 @@ app.layout = dbc.Container([
         ], md=4),
     ]),
 
+    # Segunda fila de gráficos adicionales
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader("Promedio por Estación", className="fw-bold text-success"),
+                dbc.CardBody([
+                    dcc.Graph(id='station-bar', config={"displayModeBar": False})
+                ])
+            ], className="shadow-lg rounded-4 border-0 bg-white mb-4")
+        ], md=4),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader("Tendencia por Estado", className="fw-bold text-success"),
+                dbc.CardBody([
+                    dcc.Graph(id='state-line', config={"displayModeBar": False})
+                ])
+            ], className="shadow-lg rounded-4 border-0 bg-white mb-4")
+        ], md=4),
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader("Comparativo Día vs Noche", className="fw-bold text-success"),
+                dbc.CardBody([
+                    dcc.Graph(id='daynight-bar', config={"displayModeBar": False})
+                ])
+            ], className="shadow-lg rounded-4 border-0 bg-white mb-4")
+        ], md=4),
+    ]),
+
     # Mapa y análisis detallado
     dbc.Row([
         dbc.Col([
@@ -265,6 +293,27 @@ app.layout = dbc.Container([
                 ])
             ], className="shadow-lg rounded-4 border-0 bg-white mb-4")
         ], md=5)
+    ]),
+
+    # Tabla de resumen
+    dbc.Row([
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader("Tabla de Resumen", className="fw-bold text-success"),
+                dbc.CardBody([
+                    dcc.Loading(
+                        dash.dash_table.DataTable(
+                            id='summary-table',
+                            columns=[],
+                            data=[],
+                            style_table={'overflowX': 'auto'},
+                            style_cell={'textAlign': 'center'},
+                            page_size=10
+                        )
+                    )
+                ])
+            ], className="shadow-lg rounded-4 border-0 bg-white mb-4")
+        ], width=12)
     ]),
 
     # Almacenamiento de datos
@@ -590,6 +639,105 @@ def update_contaminant_bar(json_data):
     fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
     return fig
 
+# ========== NUEVOS GRÁFICOS DE BARRAS/LÍNEAS ==========
+
+@app.callback(
+    Output('station-bar', 'figure'),
+    [Input('filtered-data', 'data')]
+)
+def update_station_bar(json_data):
+    if json_data is None:
+        raise PreventUpdate
+    df = pd.read_json(StringIO(json_data), orient='split')
+    if df.empty or 'estacion' not in df.columns:
+        return go.Figure(layout={"title": "No hay datos disponibles"})
+    df_bar = df.groupby('estacion')['valor'].mean().reset_index()
+    fig = px.bar(
+        df_bar,
+        x='estacion',
+        y='valor',
+        color='estacion',
+        text_auto='.2s',
+        labels={'valor': 'Promedio', 'estacion': 'Estación'},
+        title="Promedio por Estación"
+    )
+    fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    return fig
+
+@app.callback(
+    Output('state-line', 'figure'),
+    [Input('filtered-data', 'data')]
+)
+def update_state_line(json_data):
+    if json_data is None:
+        raise PreventUpdate
+    df = pd.read_json(StringIO(json_data), orient='split')
+    if df.empty or 'estado' not in df.columns:
+        return go.Figure(layout={"title": "No hay datos disponibles"})
+    df['fecha_hora'] = pd.to_datetime(df['fecha'], errors='coerce')
+    df_grouped = df.groupby([pd.Grouper(key='fecha_hora', freq='D'), 'estado'])['valor'].mean().reset_index()
+    fig = px.line(
+        df_grouped,
+        x='fecha_hora',
+        y='valor',
+        color='estado',
+        markers=True,
+        labels={'valor': 'Promedio', 'fecha_hora': 'Fecha', 'estado': 'Estado'},
+        title="Tendencia por Estado"
+    )
+    fig.update_layout(hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    return fig
+
+@app.callback(
+    Output('daynight-bar', 'figure'),
+    [Input('filtered-data', 'data')]
+)
+def update_daynight_bar(json_data):
+    if json_data is None:
+        raise PreventUpdate
+    df = pd.read_json(StringIO(json_data), orient='split')
+    if df.empty or 'fecha' not in df.columns:
+        return go.Figure(layout={"title": "No hay datos disponibles"})
+    df['fecha_hora'] = pd.to_datetime(df['fecha'], errors='coerce')
+    df['periodo'] = np.where(df['fecha_hora'].dt.hour.between(6, 18), 'Día', 'Noche')
+    df_bar = df.groupby('periodo')['valor'].mean().reset_index()
+    fig = px.bar(
+        df_bar,
+        x='periodo',
+        y='valor',
+        color='periodo',
+        text_auto='.2s',
+        labels={'valor': 'Promedio', 'periodo': 'Periodo'},
+        title="Comparativo Día vs Noche"
+    )
+    fig.update_layout(showlegend=False, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    return fig
+
+# ========== TABLA DE RESUMEN ==========
+
+@app.callback(
+    [Output('summary-table', 'columns'),
+     Output('summary-table', 'data')],
+    [Input('filtered-data', 'data')]
+)
+def update_summary_table(json_data):
+    if json_data is None:
+        raise PreventUpdate
+    df = pd.read_json(StringIO(json_data), orient='split')
+    if df.empty:
+        return [], []
+    # Resumen agrupado por estación y contaminante
+    summary = df.groupby(['estacion', 'contaminante']).agg(
+        promedio=('valor', 'mean'),
+        maximo=('valor', 'max'),
+        minimo=('valor', 'min'),
+        registros=('valor', 'count')
+    ).reset_index()
+    summary = summary.round(2)
+    columns = [{"name": col.capitalize(), "id": col} for col in summary.columns]
+    data = summary.to_dict('records')
+    return columns, data
+
 # ========== Funciones auxiliares ==========
 
 def calculate_risk_level(value, pollutant):
@@ -615,7 +763,6 @@ def calculate_risk_level(value, pollutant):
             return {'level': level, 'description': f"{value} {level}"}
     
     return {'level': 'Desconocido', 'description': ''}
-
 
 if __name__ == '__main__':
     server.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8050)))
