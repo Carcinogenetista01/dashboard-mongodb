@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: greentech-dashboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn dashboard:server -b 0.0.0.0:10000
+    plan: free
