@@ -1,0 +1,40 @@
+.navbar-green {
+    background: linear-gradient(90deg, #388e3c 80%, #66bb6a 100%) !important;
+    color: #fff !important;
+}
+.navbar-green .navbar-brand, .navbar-green .nav-link, .navbar-green .navbar-text {
+    color: #fff !important;
+}
+.live-dot {
+    height: 12px;
+    width: 12px;
+    background-color: #ff5252;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 7px;
+    animation: liveblink 1s infinite alternate;
+    vertical-align: middle;
+}
+@keyframes liveblink {
+    0% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+.toggle-btn-group .btn {
+    background: #fff;
+    color: #388e3c;
+    border: 1.5px solid #388e3c;
+    font-weight: bold;
+    margin-right: 5px;
+    border-radius: 20px;
+    transition: all 0.2s;
+}
+.toggle-btn-group .btn.active, .toggle-btn-group .btn:active {
+    background: #388e3c;
+    color: #fff;
+    border: 1.5px solid #388e3c;
+}
+@media (max-width: 768px) {
+    .navbar-green .navbar-brand img { height: 32px !important; }
+    .card-title, .card-header { font-size: 1rem !important; }
+    .card-body { padding: 0.7rem !important; }
+}

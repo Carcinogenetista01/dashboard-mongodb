@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - GreenTech Solutions</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #e8f5e9; }
+        .login-card { max-width: 400px; margin: 10vh auto; }
+    </style>
+</head>
+<body>
+    <div class="card login-card shadow-lg">
+        <div class="card-body">
+            <h3 class="card-title text-center text-success mb-4">Iniciar Sesión</h3>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label for="username" class="form-label fw-bold text-success">Usuario</label>
+                    <input type="text" class="form-control" id="username" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label fw-bold text-success">Contraseña</label>
+                    <input type="password" class="form-control" id="password" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">Ingresar</button>
+                <div id="msg" class="mt-3 text-danger text-center"></div>
+            </form>
+        </div>
+    </div>
+    <script>
+        const users = {
+            "Abril": "123",
+            "Jose": "123",
+            "Lulu": "123"
+        };
+        
+        document.getElementById('loginForm').onsubmit = function(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            if (users[user] && users[user] === pass) {
+                localStorage.setItem('userName', user);
+                window.location.href = "home.html";
+            } else {
+                document.getElementById('msg').textContent = "Usuario o contraseña incorrectos.";
+            }
+        };
+    </script>
+</body>
+</html>
+

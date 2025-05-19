@@ -1,0 +1,9 @@
+dash
+dash-bootstrap-components
+pandas
+numpy
+pymongo
+python-dateutil
+plotly
+flask
+waitress
